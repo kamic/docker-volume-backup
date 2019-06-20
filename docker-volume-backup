@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+######################################################################
+# Wrapper script for docker named volume backup
+#
+# Author:   Michael Kaindleinsberger
+# Mail:     m.Kaindleinsberger@gmail.com
+# Date:     16.06.2019
+# Copyright 2019
+# License: MIT
+#######################################################################
+
+#set -x
+
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROGRAM_NAME=$(basename $0)
+readonly PROGRAM_VERSION="0.2"
+readonly PROGRAM_DATE="17.06.2019"
+readonly BACKUP_PATH="/srv/dev-disk-by-label-btrfs-pool/@technik/syncthing/docker-volume-backups"
+
+info()    { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; }
+warning() { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; }
+error()   { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; }
+fatal()   { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; exit 1 ; }
+
+info "starting."
+
+#Backup Grafana Volume
+info "starting backup of grafana..."
+docker stop grafana
+docker run --rm --volumes-from grafana -v $BACKUP_PATH:/backup ubuntu tar cvfz /backup/$(date +%Y-%m-%d)_grafana-storage-backup.tar.gz /var/lib/grafana
+docker start grafana
+info "done."
+
+#Backup Heimdall Volume
+info "starting backup of heimdall..."
+docker stop heimdall
+docker run --rm --volumes-from heimdall -v $BACKUP_PATH:/backup ubuntu tar cvfz /backup/$(date +%Y-%m-%d)_heimdall-config-backup.tar.gz /config
+docker start heimdall
+info "done."
+
+#Backup Syncthing Volume
+info "starting backup of syncthing..."
+docker stop syncthing
+docker run --rm --volumes-from syncthing -v $BACKUP_PATH:/backup ubuntu tar cvfz /backup/$(date +%Y-%m-%d)_syncthing-config-backup.tar.gz /config
+docker start syncthing
+info "done."
+
+#Backup DokuWiki Volume
+info "starting backup of dokuwiki..."
+docker stop dokuwiki
+docker run --rm --volumes-from dokuwiki -v $BACKUP_PATH:/backup ubuntu tar cvfz /backup/$(date +%Y-%m-%d)_dokuwiki-config-backup.tar.gz /config
+docker start dokuwiki
+info "done."
+
+info "finished!"
