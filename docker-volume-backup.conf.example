@@ -1,0 +1,16 @@
+#use telegram-notify
+TELEGRAM=true
+
+#define backup-path on host
+BACKUP_PATH="/absolute/path/to/folder/for/backups"
+
+#array of containers for backup
+CONTAINERS=(
+"grafana"
+"heimdall"
+)
+
+#associative array of mount points of named volumes for all containers in CONTAINERS array
+declare -A CONTAINER_MOUNT
+CONTAINER_MOUNT[grafana]="/var/lib/grafana"
+CONTAINER_MOUNT[heimdall]="/config"

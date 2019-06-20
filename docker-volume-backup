@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+######################################################################
+# Wrapper script for docker named volume backup
+#
+# Author:   Michael Kaindleinsberger
+# Mail:     m.Kaindleinsberger@gmail.com
+# Date:     20.06.2019
+# Copyright 2019
+# License: MIT
+#######################################################################
+
+#set -x
+
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROGRAM_NAME=$(basename $0)
+readonly PROGRAM_VERSION="0.3"
+readonly PROGRAM_DATE="20.06.2019"
+
+source /etc/docker-volume-backup.conf
+
+info()    { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; [ "$TELEGRAM" = true ] && telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [INFO]    $@" ; }
+warning() { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; [ "$TELEGRAM" = true ] && telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [WARNING] $@" ; }
+error()   { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; [ "$TELEGRAM" = true ] && telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [ERROR]   $@" ; }
+fatal()   { logger "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; echo "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; [ "$TELEGRAM" = true ] && telegram-notify --silent --html --text "$(date +'%d.%m.%Y %H:%M:%S') - $PROGRAM_NAME - [FATAL]   $@" ; exit 1 ; }
+
+info "starting."
+
+for container in "${CONTAINERS[@]}"
+do
+
+  info "starting backup of $container..."
+
+  docker stop $container
+  docker run --rm --volumes-from $container -v $BACKUP_PATH:/backup ubuntu tar cvfz /backup/$(date +%Y-%m-%d)_$container-storage-backup.tar.gz ${CONTAINER_MOUNT[$container]}
+  docker start $container
+
+  info "done."
+
+done
+
+info "finished!"
